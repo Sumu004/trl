@@ -81,15 +81,6 @@ class _StubRolloutWorker:
     def stop(self):
         pass
 
-    def pause(self):
-        pass
-
-    def resume(self):
-        pass
-
-    def send_weights(self, iterator):
-        pass
-
 
 class TestAsyncGRPOTrainer(TrlTestCase):
     def test_init_minimal(self):
