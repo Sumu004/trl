@@ -63,7 +63,14 @@ def apply_model_revisions(monkeypatch):
     if not MODEL_REVISIONS:
         return
 
-    from transformers import PreTrainedModel, PreTrainedTokenizerBase, ProcessorMixin
+    from transformers import (
+        AutoConfig,
+        AutoModelForCausalLM,
+        AutoModelForSequenceClassification,
+        PreTrainedModel,
+        PreTrainedTokenizerBase,
+        ProcessorMixin,
+    )
 
     def create_classmethod_wrapper(original_classmethod):
         # Extract the underlying function from the classmethod
@@ -75,6 +82,11 @@ def apply_model_revisions(monkeypatch):
             if pretrained_model_name_or_path in MODEL_REVISIONS:
                 if "revision" not in kwargs:
                     kwargs["revision"] = MODEL_REVISIONS[pretrained_model_name_or_path]
+                    # Clear _commit_hash: Auto classes resolve it from the default branch before calling
+                    # sub-loaders, so the cached hash points to main. If we don't clear it, it silently
+                    # overrides the injected revision for the config load while the weight loader uses the
+                    # revision, producing a config/weights shape mismatch.
+                    kwargs.pop("_commit_hash", None)
 
             return original_func(cls, pretrained_model_name_or_path, *args, **kwargs)
 
@@ -83,6 +95,9 @@ def apply_model_revisions(monkeypatch):
 
     # Patch all transformers Auto* classes
     for cls in [
+        AutoConfig,
+        AutoModelForCausalLM,
+        AutoModelForSequenceClassification,
         PreTrainedModel,
         PreTrainedTokenizerBase,
         ProcessorMixin,
